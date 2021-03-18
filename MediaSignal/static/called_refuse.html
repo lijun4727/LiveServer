@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Chat Example</title>
+<script type="text/javascript">
+window.onload = function () {
+    var conn;
+    var msg = document.getElementById("msg");
+    var log = document.getElementById("log");
+    var phone = document.getElementById("phone");
+    var device_id = document.getElementById("device_id");
+
+    function appendLog(item) {
+        var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+        log.appendChild(item);
+        if (doScroll) {
+            log.scrollTop = log.scrollHeight - log.clientHeight;
+        }
+    }
+
+    function createWebsocket(){
+        if (window["WebSocket"]) {
+            var url = "ws://" + document.location.host + "/socket.io?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwaG9uZSI6IjEzNjUxODg0OTY3IiwiZGV2aWNlaWQiOiJ0djg4OCIsImV4cCI6MTYxNDY1NTU2Mn0.RTqIZLcQXf9ldtL7Vzm2GG5IS4P3TwikNWG3GHAkdVc";
+            conn = new WebSocket(url);
+            conn.onclose = function (evt) {
+                var item = document.createElement("div");
+                item.innerHTML = "<b>Connection closed.</b>";
+                appendLog(item);
+            };
+            conn.onmessage = function (evt) {
+                var messages = evt.data.split('\n');
+                for (var i = 0; i < messages.length; i++) {
+                    var item = document.createElement("div");
+                    item.innerText = messages[i];
+                    appendLog(item);
+
+                    var json = JSON.parse(messages[i]);
+                    switch (json.type) {
+                        case "called":
+                            var message = {
+                                type: "called_refuse",
+                                from_phone: json.from_phone,
+                                from_device_id: json.from_device_id,
+                                room_id: json.room_id,
+                            };
+                            conn.send(JSON.stringify(message));
+                            break;
+                        case "call_success":
+                            alert("call_success:to_phone=" + json.to_phone + ",to_device_id="+json.to_device_id)
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            };
+            return true;
+        } else {
+            var item = document.createElement("div");
+            item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+            appendLog(item);
+            return false;
+        }
+    }
+    document.getElementById("form").onsubmit = function () {
+        if (!conn) {
+            return false;           
+        }
+        if (!msg.value) {
+            return false;
+        }
+
+        var callPhone = document.getElementById("call_phone");
+        var callDeviceId = document.getElementById("call_device_id");
+
+        var message = {
+            type: "call",
+            to_phone: "13651884967",
+            to_device_id: "tv888",
+        };
+
+        conn.send(JSON.stringify(message));
+        //msg.value = "";
+        return false;
+    };
+    createWebsocket();
+};
+</script>
+<style type="text/css">
+html {
+    overflow: hidden;
+}
+
+body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: gray;
+}
+
+#log {
+    background: white;
+    margin: 0;
+    padding: 0.5em 0.5em 0.5em 0.5em;
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+    right: 0.5em;
+    bottom: 3em;
+    overflow: auto;
+}
+
+#form {
+    padding: 0 0.5em 0 0.5em;
+    margin: 0;
+    position: absolute;
+    bottom: 1em;
+    left: 0px;
+    width: 100%;
+    overflow: hidden;
+}
+
+</style>
+</head>
+<body>
+<div id="log"></div>
+<form id="form">
+    <input type="submit" value="Send" />
+    <input type="text" id="msg" size="64" autofocus /><br>
+</form>
+
+</body>
+</html>
